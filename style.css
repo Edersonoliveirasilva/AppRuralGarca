@@ -1,0 +1,48 @@
+:root {
+    --verde-escuro: #1A2F22;
+    --verde-folha: #2E5939;
+    --verde-claro: #8FBC8F;
+    --vermelho-alerta: #D93025;
+    --fundo-app: #f4f7f6;
+    --texto: #333333;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+body { background-color: var(--fundo-app); color: var(--texto); }
+
+header { background-color: var(--verde-escuro); color: white; padding: 15px; text-align: center; }
+header h1 { font-size: 1.5rem; margin-bottom: 15px; }
+
+nav { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+nav button {
+    background: transparent; border: 1px solid var(--verde-claro); color: white;
+    padding: 8px 15px; border-radius: 20px; cursor: pointer; transition: 0.3s;
+}
+nav button.active, nav button:hover { background-color: var(--verde-claro); color: var(--verde-escuro); font-weight: bold; }
+
+main { padding: 20px; max-width: 600px; margin: 0 auto; }
+
+h2 { color: var(--verde-folha); margin-bottom: 15px; text-align: center; }
+
+.card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
+
+.alerta { background-color: #FCE8E6; color: var(--vermelho-alerta); border-left: 5px solid var(--vermelho-alerta); font-weight: bold; }
+
+.form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+.form-group input, .form-group select {
+    padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem;
+}
+
+.btn-calcular {
+    background-color: var(--verde-folha); color: white; width: 100%; padding: 15px;
+    border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+}
+.btn-calcular:hover { background-color: var(--verde-escuro); }
+
+.resultado h3 { font-size: 1rem; color: #666; }
+.resultado h2 { font-size: 2rem; color: var(--verde-folha); }
+ul#listaDireitos { list-style-type: none; margin-bottom: 15px; }
+ul#listaDireitos li { padding: 5px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;}
+
+.chart-container { background: var(--verde-escuro); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }

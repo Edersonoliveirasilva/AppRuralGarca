@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sindicato Rural Garça</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <!-- Biblioteca para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>🚜 Sindicato Rural Garça</h1>
+        <nav>
+            <button onclick="mudarAba('dashboard')" class="active" id="btn-dashboard">Dashboard</button>
+            <button onclick="mudarAba('salario')" id="btn-salario">Salário</button>
+            <button onclick="mudarAba('rescisao')" id="btn-rescisao">Rescisão</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ABA 1: DASHBOARD -->
+        <section id="dashboard" class="aba active">
+            <h2>Evolução Salarial (2006 - 2026)</h2>
+            <div class="chart-container">
+                <canvas id="graficoEvolucao"></canvas>
+            </div>
+        </section>
+
+        <!-- ABA 2: CÁLCULO SALÁRIO -->
+        <section id="salario" class="aba" style="display: none;">
+            <h2>Cálculo de Salário (Base: R$ 1.935,00)</h2>
+            <div class="card alerta">
+                ⚠️ Dissídio sempre em Outubro!
+            </div>
+            
+            <div class="card form-group">
+                <label>Ganha ACIMA do piso? Digite o salário base atual (R$):</label>
+                <input type="number" id="salarioAtual" placeholder="Ex: 2500" oninput="calcularAumento()">
+            </div>
+            
+            <div class="card resultado">
+                <h3>Novo Salário (+7,5%):</h3>
+                <h2 id="novoSalario">R$ 0,00</h2>
+            </div>
+        </section>
+
+        <!-- ABA 3: RESCISÃO -->
+        <section id="rescisao" class="aba" style="display: none;">
+            <h2>Simulador de Rescisão</h2>
+            
+            <div class="form-group">
+                <label>Motivo da Saída:</label>
+                <select id="motivoSaida">
+                    <option value="sem_justa_causa">Demissão Sem Justa Causa</option>
+                    <option value="pedido">Pedido de Demissão</option>
+                    <option value="justa_causa">Demissão Por Justa Causa</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Data de Admissão:</label>
+                <input type="date" id="dataAdmissao">
+            </div>
+
+            <div class="form-group">
+                <label>Data de Demissão (Saída):</label>
+                <input type="date" id="dataDemissao">
+            </div>
+
+            <div class="form-group">
+                <label>Último Salário (R$):</label>
+                <input type="number" id="salarioBaseRescisao" value="1935">
+            </div>
+
+            <button class="btn-calcular" onclick="calcularRescisao()">Calcular Rescisão</button>
+
+            <div id="resultadoRescisao" class="card resultado" style="display:none; margin-top: 15px;">
+                <ul id="listaDireitos"></ul>
+                <h3>Total Estimado:</h3>
+                <h2 id="totalRescisao">R$ 0,00</h2>
+                <div id="alertaDissidio" class="alerta" style="display: none; margin-top: 10px;">
+                    ⚠️ MULTA APLICADA: Demissão 30 dias antes do dissídio (Setembro). Multa de 1 salário (Art. 9º).
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        // Registro do Service Worker para o PWA (Instalação e Offline)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>

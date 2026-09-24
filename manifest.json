@@ -1,0 +1,16 @@
+{
+  "name": "Sindicato Rural Garça PWA",
+  "short_name": "SindRural",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1A2F22",
+  "theme_color": "#1A2F22",
+  "description": "App de consulta e cálculo para trabalhadores rurais de Garça.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/306/306037.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
