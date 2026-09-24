@@ -24,18 +24,28 @@ async function buscarSalarioMinimoGov() {
         const data = await response.json();
         
         if (data && data.length > 0) {
-            const valorOficial = parseFloat(data[0].valor);
-            // Trava de segurança: Se a API falhar na pontuação e mandar "1.62", ignora e usa o padrão.
-            if (valorOficial > 1000) {
+            let valorAPI = String(data[0].valor);
+            
+            // Segurança: Se a API mandar formato BR "1.621,00", limpa os pontos e troca vírgula por ponto
+            if (valorAPI.includes(',')) {
+                valorAPI = valorAPI.replace(/\./g, '').replace(',', '.');
+            }
+            
+            const valorOficial = parseFloat(valorAPI);
+            
+            // Trava de segurança para garantir que é um valor real de salário
+            if (!isNaN(valorOficial) && valorOficial > 1000 && valorOficial < 10000) {
                 inputSalario.value = valorOficial.toFixed(2);
             } else {
-                inputSalario.value = "1518.00"; // Valor projetado 2025/2026
+                inputSalario.value = "1621.00"; // Fallback oficial de 2026
             }
         }
     } catch (error) {
-        console.error("Erro API Banco Central:", error);
-        inputSalario.value = "1518.00"; 
+        console.error("Erro ao buscar na API do Banco Central:", error);
+        inputSalario.value = "1621.00"; // Se estiver sem internet, assume 2026
     }
+    
+    // Assim que descobrir o valor mínimo, recalcula toda a tabela
     calcularSalarioCompleto();
 }
 
@@ -87,28 +97,45 @@ function desenharGrafico() {
 const formatar = (valor) => valor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
 function calcularAcimaPiso() {
-    let input = document.getElementById('salarioAcimaPiso').value;
-    let base = parseFloat(input);
+    let inputStr = document.getElementById('salarioAcimaPiso').value;
+    
+    // Limpeza rigorosa: remove "R$", espaços, e trata virgula/ponto
+    inputStr = inputStr.replace(/[^0-9,.]/g, '');
+    
+    // Se o usuário digitou com vírgula (ex: 3000,00), converte para o padrão do código
+    if (inputStr.includes(',')) {
+        inputStr = inputStr.replace(/\./g, '').replace(',', '.');
+    }
+    
+    let base = parseFloat(inputStr);
     let el = document.getElementById('resultadoAcimaPiso');
     
     if(!isNaN(base) && base > 0) {
-        let novo = base * 1.075; // Calcula os 7,5%
+        let novo = base * 1.075; // Aumento de 7,5%
         el.innerText = `Novo Salário (+7,5%): ${formatar(novo)}`;
         el.style.display = 'block';
         
-        // A MÁGICA AQUI: Atualiza o campo "Salário Piso Rural" com o novo valor
-        // e manda recalcular a tabela inteira baseada nesse novo valor!
+        // Manda o novo valor para a base de cálculo e atualiza a tabela inteira
         document.getElementById('salarioPiso').value = novo.toFixed(2);
         calcularSalarioCompleto();
     }
 }
 
 function calcularSalarioCompleto() {
-    // Agora o "piso" pega o valor que estiver na caixinha (seja o base 1935 ou o calculado acima)
-    const piso = parseFloat(document.getElementById('salarioPiso').value) || 1935;
-    const minVigente = parseFloat(document.getElementById('salarioMinimo').value) || 1518;
+    // 1. Pegando e limpando o valor do Piso
+    let pisoStr = document.getElementById('salarioPiso').value;
+    if (pisoStr.includes(',')) pisoStr = pisoStr.replace(/\./g, '').replace(',', '.');
+    const piso = parseFloat(pisoStr) || 1935.00;
+
+    // 2. Pegando e limpando o valor do Salário Mínimo
+    let minStr = document.getElementById('salarioMinimo').value;
+    if (minStr.includes(',')) minStr = minStr.replace(/\./g, '').replace(',', '.');
+    const minVigente = parseFloat(minStr) || 1621.00;
+    
+    // 3. Verificando o Checkbox da Insalubridade
     const temInsal = document.getElementById('temInsalubridade').checked;
 
+    // Regras matemáticas Trabalhistas
     const diaria = piso / 30;
     const horaNormal = piso / 220;
     const horaExtra50 = horaNormal * 1.5;
@@ -119,6 +146,7 @@ function calcularSalarioCompleto() {
     const insalubridade = temInsal ? (minVigente * 0.20) : 0;
     const salFamilia = 65.00;
 
+    // Construção da Tabela na tela
     const linhas = `
         <tr><th>Descrição</th><th>Valor (R$)</th></tr>
         <tr><td>SALÁRIO BRUTO</td><td>${formatar(piso)}</td></tr>
@@ -131,8 +159,10 @@ function calcularSalarioCompleto() {
         <tr><td>1/3 das FÉRIAS</td><td>${formatar(umTercoFerias)}</td></tr>
         <tr><td>FÉRIAS PROP. + 1/3 (1 mês)</td><td>${formatar(feriasProp)}</td></tr>
         <tr><td>Salário Família</td><td>${formatar(salFamilia)}</td></tr>
-        <tr style="background:#f9f9f9;"><td>ADICIONAL INSALUBRIDADE 20% (Base Mínimo: ${formatar(minVigente)})</td>
-        <td style="color:${temInsal ? '#D93025' : '#000'}">${formatar(insalubridade)}</td></tr>
+        <tr style="background:#f9f9f9;">
+            <td>ADICIONAL INSALUBRIDADE 20% (Base Mínimo: ${formatar(minVigente)})</td>
+            <td style="color:${temInsal ? '#D93025' : '#000'}; font-weight:bold;">${formatar(insalubridade)}</td>
+        </tr>
     `;
     document.getElementById('tabelaSalario').innerHTML = linhas;
 }
@@ -143,7 +173,7 @@ function calcularSalarioCompleto() {
 function verificarJustaCausa() {
     const motivo = document.getElementById('motivoSaidaRescisao').value;
     if(motivo === 'justa_causa') {
-        alert("Na Justa Causa, o trabalhador perde direito a Férias Proporcionais, 13º Proporcional, Aviso Prévio e Saque/Multa do FGTS.");
+        alert("Atenção: Na Demissão por Justa Causa, o trabalhador perde o direito a Férias Proporcionais, 13º Proporcional, Aviso Prévio, Saque do FGTS e Multa de 40%.");
     }
 }
 
@@ -152,20 +182,33 @@ function calcularRescisaoCompleta() {
     const motivo = document.getElementById('motivoSaidaRescisao').value;
     const dataAdm = new Date(document.getElementById('dataAdmissao').value);
     const dataDem = new Date(document.getElementById('dataDemissao').value);
-    const salarioBase = parseFloat(document.getElementById('salarioBaseRescisao').value);
+    
+    // Tratamento rigoroso do Salario Base Rescisão
+    let salBaseStr = document.getElementById('salarioBaseRescisao').value;
+    if (salBaseStr.includes(',')) salBaseStr = salBaseStr.replace(/\./g, '').replace(',', '.');
+    const salarioBase = parseFloat(salBaseStr);
+    
     const temInsal = document.getElementById('insalubridadeRescisao').checked;
     const qtdFeriasVencidas = parseInt(document.getElementById('feriasVencidas').value);
 
+    // Validações
     if(isNaN(dataAdm.getTime()) || isNaN(dataDem.getTime()) || isNaN(salarioBase)) {
-        alert("Preencha as datas de Admissão, Demissão e o Salário Base.");
+        alert("Preencha corretamente as datas de Admissão, Demissão e o Salário Base.");
         return;
     }
     if(dataDem <= dataAdm) {
-        alert("A data de demissão deve ser maior que a de admissão.");
+        alert("Erro: A data de demissão não pode ser menor ou igual à data de admissão.");
         return;
     }
 
-    const salarioCalculo = salarioBase + (temInsal ? (parseFloat(document.getElementById('salarioMinimo').value) * 0.20) : 0);
+    // Calcula Base Remuneratória (Salário + Insalubridade se houver)
+    let minStr = document.getElementById('salarioMinimo').value;
+    if (minStr.includes(',')) minStr = minStr.replace(/\./g, '').replace(',', '.');
+    const minVigente = parseFloat(minStr) || 1621.00;
+    
+    const salarioCalculo = salarioBase + (temInsal ? (minVigente * 0.20) : 0);
+    
+    // Matemáticas de tempo
     const diasTrabalhadosTotal = Math.floor((dataDem - dataAdm) / (1000 * 60 * 60 * 24));
     const mesesTrabalhadosTotal = diasTrabalhadosTotal / 30;
     const anosCompletos = Math.floor(diasTrabalhadosTotal / 365);
@@ -177,16 +220,19 @@ function calcularRescisaoCompleta() {
     let direitos = [];
     let totalLiquido = 0;
 
+    // 1. Saldo de Salário
     let saldoSalario = (salarioCalculo / 30) * diasMesDemissao;
     direitos.push(`<li><span>Saldo de Salário (${diasMesDemissao} dias)</span> <span>${formatar(saldoSalario)}</span></li>`);
     totalLiquido += saldoSalario;
 
+    // 2. Férias Vencidas
     if(qtdFeriasVencidas > 0) {
         let feriasVencValor = (salarioCalculo + (salarioCalculo / 3)) * qtdFeriasVencidas;
         direitos.push(`<li><span>Férias Vencidas + 1/3 (${qtdFeriasVencidas} ref.)</span> <span>${formatar(feriasVencValor)}</span></li>`);
         totalLiquido += feriasVencValor;
     }
 
+    // 3. Proporcionais (Não entram em Justa Causa)
     if(motivo !== 'justa_causa') {
         let mesesProporcionais = (diasMesDemissao >= 15) ? (mesesPara13 + 1) : mesesPara13;
         
@@ -202,13 +248,16 @@ function calcularRescisaoCompleta() {
 
     document.getElementById('alertaDissidio').style.display = 'none';
 
+    // 4. Direitos específicos de "Sem Justa Causa"
     if(motivo === 'sem_justa_causa') {
+        // Aviso Prévio (30 dias base + 3 por ano trabalhado, limitado a 90)
         let diasAviso = 30 + (anosCompletos * 3);
         if(diasAviso > 90) diasAviso = 90;
         let valorAviso = (salarioCalculo / 30) * diasAviso;
         direitos.push(`<li><span>Aviso Prévio Indenizado (${diasAviso} dias)</span> <span>${formatar(valorAviso)}</span></li>`);
         totalLiquido += valorAviso;
 
+        // MULTA DO DISSÍDIO (Demissão em Setembro - Mês 9)
         if(mesDemissao === 9) {
             let multaDissidio = salarioCalculo;
             direitos.push(`<li style="color:#D93025; font-weight:bold;"><span>Multa Dissídio (Art 9º)</span> <span>${formatar(multaDissidio)}</span></li>`);
@@ -217,6 +266,7 @@ function calcularRescisaoCompleta() {
         }
     }
 
+    // 5. FGTS Estimativa
     let saldoEstimadoFGTS = (salarioCalculo * 0.08) * mesesTrabalhadosTotal;
     let multaFGTS = 0;
     
@@ -231,6 +281,7 @@ function calcularRescisaoCompleta() {
         document.getElementById('linhaMultaFGTS').style.display = 'none';
     }
 
+    // Print final na tela
     document.getElementById('listaDireitosRescisao').innerHTML = direitos.join('');
     document.getElementById('totalRescisao').innerText = formatar(totalLiquido);
     
