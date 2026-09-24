@@ -20,26 +20,28 @@ function mudarAba(abaId) {
 async function buscarSalarioMinimoGov() {
     const inputSalario = document.getElementById('salarioMinimo');
     try {
-        // Conecta na API oficial do Governo (SGS - Banco Central, Série 1619 - Salário Mínimo)
         const response = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.1619/dados/ultimos/1?formato=json');
         const data = await response.json();
         
         if (data && data.length > 0) {
             const valorOficial = parseFloat(data[0].valor);
-            inputSalario.value = valorOficial.toFixed(2); // Atualiza o campo com o valor oficial
+            // Trava de segurança: Se a API falhar na pontuação e mandar "1.62", ignora e usa o padrão.
+            if (valorOficial > 1000) {
+                inputSalario.value = valorOficial.toFixed(2);
+            } else {
+                inputSalario.value = "1518.00"; // Valor projetado 2025/2026
+            }
         }
     } catch (error) {
-        console.error("Erro ao buscar no Banco Central:", error);
-        // Fallback de segurança: se o site do governo cair, ele mantém o valor base
-        inputSalario.value = "1412.00"; 
+        console.error("Erro API Banco Central:", error);
+        inputSalario.value = "1518.00"; 
     }
-    // Após buscar, ele recalcula a tabela da insalubridade
     calcularSalarioCompleto();
 }
 
 window.onload = () => { 
     mudarAba('dashboard'); 
-    buscarSalarioMinimoGov(); // Chama o robô da API assim que o app carrega
+    buscarSalarioMinimoGov(); 
 };
 
 // ==========================================
@@ -90,15 +92,21 @@ function calcularAcimaPiso() {
     let el = document.getElementById('resultadoAcimaPiso');
     
     if(!isNaN(base) && base > 0) {
-        let novo = base * 1.075;
+        let novo = base * 1.075; // Calcula os 7,5%
         el.innerText = `Novo Salário (+7,5%): ${formatar(novo)}`;
         el.style.display = 'block';
+        
+        // A MÁGICA AQUI: Atualiza o campo "Salário Piso Rural" com o novo valor
+        // e manda recalcular a tabela inteira baseada nesse novo valor!
+        document.getElementById('salarioPiso').value = novo.toFixed(2);
+        calcularSalarioCompleto();
     }
 }
 
 function calcularSalarioCompleto() {
+    // Agora o "piso" pega o valor que estiver na caixinha (seja o base 1935 ou o calculado acima)
     const piso = parseFloat(document.getElementById('salarioPiso').value) || 1935;
-    const minVigente = parseFloat(document.getElementById('salarioMinimo').value) || 1412;
+    const minVigente = parseFloat(document.getElementById('salarioMinimo').value) || 1518;
     const temInsal = document.getElementById('temInsalubridade').checked;
 
     const diaria = piso / 30;
