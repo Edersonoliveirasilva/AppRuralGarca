@@ -46,10 +46,18 @@ h2 { color: var(--verde-folha); margin-bottom: 15px; text-align: center; }
 ul#listaDireitosRescisao { list-style-type: none; margin-bottom: 15px; }
 ul#listaDireitosRescisao li { padding: 5px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between;}
 
-.chart-container { background: var(--verde-escuro); padding: 15px; border-radius: 10px; }
+/* AQUI ESTÁ A CORREÇÃO DA TELA PRETA DO GRÁFICO */
+.chart-container { 
+    background: var(--verde-escuro); 
+    padding: 15px; 
+    border-radius: 10px; 
+    height: 300px; 
+    position: relative;
+    width: 100%;
+}
 .header-impressao { display: none; text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; }
 
-/* REGRAS DE IMPRESSÃO (Ocultar botões, menus e mostrar apenas relatórios) */
+/* REGRAS DE IMPRESSÃO */
 @media print {
     .no-print { display: none !important; }
     body { background-color: white; }

@@ -10,15 +10,36 @@ function mudarAba(abaId) {
     document.getElementById(abaId).style.display = 'block';
     document.getElementById('btn-' + abaId).classList.add('active');
 
-    // Ao ir para a tela de cálculo, renderiza os valores padrão
     if(abaId === 'salario') { calcularSalarioCompleto(); }
-    
-    // Força o gráfico a renderizar corretamente ao abrir a aba
     if(abaId === 'dashboard') { desenharGrafico(); }
+}
+
+// ==========================================
+// BUSCA AUTOMÁTICA (API DO BANCO CENTRAL DO BRASIL)
+// ==========================================
+async function buscarSalarioMinimoGov() {
+    const inputSalario = document.getElementById('salarioMinimo');
+    try {
+        // Conecta na API oficial do Governo (SGS - Banco Central, Série 1619 - Salário Mínimo)
+        const response = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.1619/dados/ultimos/1?formato=json');
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+            const valorOficial = parseFloat(data[0].valor);
+            inputSalario.value = valorOficial.toFixed(2); // Atualiza o campo com o valor oficial
+        }
+    } catch (error) {
+        console.error("Erro ao buscar no Banco Central:", error);
+        // Fallback de segurança: se o site do governo cair, ele mantém o valor base
+        inputSalario.value = "1412.00"; 
+    }
+    // Após buscar, ele recalcula a tabela da insalubridade
+    calcularSalarioCompleto();
 }
 
 window.onload = () => { 
     mudarAba('dashboard'); 
+    buscarSalarioMinimoGov(); // Chama o robô da API assim que o app carrega
 };
 
 // ==========================================
@@ -34,7 +55,7 @@ function desenharGrafico() {
     const salarios = [350, 510, 788, 1045, 1412, 1550, 1935];
 
     graficoInstancia = new Chart(ctx.getContext('2d'), {
-        type: 'bar', // Mudei para barra para ficar mais fácil de visualizar no celular
+        type: 'bar',
         data: {
             labels: anos,
             datasets: [{
@@ -59,7 +80,7 @@ function desenharGrafico() {
 }
 
 // ==========================================
-// MÓDULO 1: CÁLCULO DE SALÁRIO (Igual a planilha)
+// MÓDULO 1: CÁLCULO DE SALÁRIO
 // ==========================================
 const formatar = (valor) => valor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
@@ -77,7 +98,7 @@ function calcularAcimaPiso() {
 
 function calcularSalarioCompleto() {
     const piso = parseFloat(document.getElementById('salarioPiso').value) || 1935;
-    const minVigente = parseFloat(document.getElementById('salarioMinimo').value) || 1518;
+    const minVigente = parseFloat(document.getElementById('salarioMinimo').value) || 1412;
     const temInsal = document.getElementById('temInsalubridade').checked;
 
     const diaria = piso / 30;
@@ -88,7 +109,7 @@ function calcularSalarioCompleto() {
     const umTercoFerias = piso / 3;
     const feriasProp = (piso / 12) + ((piso / 12) / 3);
     const insalubridade = temInsal ? (minVigente * 0.20) : 0;
-    const salFamilia = 65.00; // Fixo conforme sua tabela
+    const salFamilia = 65.00;
 
     const linhas = `
         <tr><th>Descrição</th><th>Valor (R$)</th></tr>
@@ -112,7 +133,6 @@ function calcularSalarioCompleto() {
 // MÓDULO 2: SIMULADOR DE RESCISÃO COMPLETA
 // ==========================================
 function verificarJustaCausa() {
-    // Se for justa causa, desabilita aviso prévio e FGTS
     const motivo = document.getElementById('motivoSaidaRescisao').value;
     if(motivo === 'justa_causa') {
         alert("Na Justa Causa, o trabalhador perde direito a Férias Proporcionais, 13º Proporcional, Aviso Prévio e Saque/Multa do FGTS.");
@@ -137,34 +157,28 @@ function calcularRescisaoCompleta() {
         return;
     }
 
-    // Adiciona insalubridade à base de cálculo se houver (considerando mínimo de 1518)
-    const salarioCalculo = salarioBase + (temInsal ? (1518 * 0.20) : 0);
-
-    // Cálculos de tempo
+    const salarioCalculo = salarioBase + (temInsal ? (parseFloat(document.getElementById('salarioMinimo').value) * 0.20) : 0);
     const diasTrabalhadosTotal = Math.floor((dataDem - dataAdm) / (1000 * 60 * 60 * 24));
     const mesesTrabalhadosTotal = diasTrabalhadosTotal / 30;
     const anosCompletos = Math.floor(diasTrabalhadosTotal / 365);
     
-    const mesDemissao = dataDem.getMonth() + 1; // 1 a 12
+    const mesDemissao = dataDem.getMonth() + 1; 
     const diasMesDemissao = dataDem.getDate();
-    const mesesPara13 = dataDem.getMonth(); // Janeiro = 0 (1/12), Fevereiro = 1 (2/12)
+    const mesesPara13 = dataDem.getMonth(); 
 
     let direitos = [];
     let totalLiquido = 0;
 
-    // 1. Saldo de Salário
     let saldoSalario = (salarioCalculo / 30) * diasMesDemissao;
     direitos.push(`<li><span>Saldo de Salário (${diasMesDemissao} dias)</span> <span>${formatar(saldoSalario)}</span></li>`);
     totalLiquido += saldoSalario;
 
-    // 2. Férias Vencidas
     if(qtdFeriasVencidas > 0) {
         let feriasVencValor = (salarioCalculo + (salarioCalculo / 3)) * qtdFeriasVencidas;
         direitos.push(`<li><span>Férias Vencidas + 1/3 (${qtdFeriasVencidas} ref.)</span> <span>${formatar(feriasVencValor)}</span></li>`);
         totalLiquido += feriasVencValor;
     }
 
-    // 3. Verbas Proporcionais (Não se aplica em Justa Causa)
     if(motivo !== 'justa_causa') {
         let mesesProporcionais = (diasMesDemissao >= 15) ? (mesesPara13 + 1) : mesesPara13;
         
@@ -172,15 +186,12 @@ function calcularRescisaoCompleta() {
         direitos.push(`<li><span>13º Proporcional (${mesesProporcionais}/12)</span> <span>${formatar(decimoTerceiro)}</span></li>`);
         totalLiquido += decimoTerceiro;
 
-        // Aproximação de meses de férias proporcionais (ciclo aquisitivo)
         let feriasProp = (salarioCalculo / 12) * mesesProporcionais;
         let tercoFeriasProp = feriasProp / 3;
         direitos.push(`<li><span>Férias Proporcionais + 1/3</span> <span>${formatar(feriasProp + tercoFeriasProp)}</span></li>`);
         totalLiquido += (feriasProp + tercoFeriasProp);
     }
 
-    // 4. Aviso Prévio e Multa Dissídio (Só Sem Justa Causa)
-    let multaDissidio = 0;
     document.getElementById('alertaDissidio').style.display = 'none';
 
     if(motivo === 'sem_justa_causa') {
@@ -190,32 +201,28 @@ function calcularRescisaoCompleta() {
         direitos.push(`<li><span>Aviso Prévio Indenizado (${diasAviso} dias)</span> <span>${formatar(valorAviso)}</span></li>`);
         totalLiquido += valorAviso;
 
-        // REGRA DO DISSÍDIO (SETEMBRO = MÊS 9)
         if(mesDemissao === 9) {
-            multaDissidio = salarioCalculo;
+            let multaDissidio = salarioCalculo;
             direitos.push(`<li style="color:#D93025; font-weight:bold;"><span>Multa Dissídio (Art 9º)</span> <span>${formatar(multaDissidio)}</span></li>`);
             totalLiquido += multaDissidio;
             document.getElementById('alertaDissidio').style.display = 'block';
         }
     }
 
-    // 5. Cálculo do FGTS Retido/Devido (8% do salário)
-    // Estimativa de depósitos de 8% sobre os salários durante todo o período
     let saldoEstimadoFGTS = (salarioCalculo * 0.08) * mesesTrabalhadosTotal;
     let multaFGTS = 0;
     
     document.getElementById('valorSaldoFGTS').innerText = formatar(saldoEstimadoFGTS);
     
     if(motivo === 'sem_justa_causa') {
-        multaFGTS = saldoEstimadoFGTS * 0.40; // Multa de 40%
+        multaFGTS = saldoEstimadoFGTS * 0.40; 
         document.getElementById('valorMultaFGTS').innerText = formatar(multaFGTS);
         document.getElementById('linhaMultaFGTS').style.display = 'block';
-        totalLiquido += multaFGTS; // Multa vai pro bolso do trabalhador
+        totalLiquido += multaFGTS; 
     } else {
         document.getElementById('linhaMultaFGTS').style.display = 'none';
     }
 
-    // Renderiza Resultados
     document.getElementById('listaDireitosRescisao').innerHTML = direitos.join('');
     document.getElementById('totalRescisao').innerText = formatar(totalLiquido);
     
