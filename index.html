@@ -6,93 +6,139 @@
     <title>Sindicato Rural Garça</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
-    <!-- Biblioteca para os gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <header>
+    <header class="no-print">
         <h1>🚜 Sindicato Rural Garça</h1>
         <nav>
             <button onclick="mudarAba('dashboard')" class="active" id="btn-dashboard">Dashboard</button>
-            <button onclick="mudarAba('salario')" id="btn-salario">Salário</button>
+            <button onclick="mudarAba('salario')" id="btn-salario">Cálculo Salário</button>
             <button onclick="mudarAba('rescisao')" id="btn-rescisao">Rescisão</button>
         </nav>
     </header>
 
     <main>
         <!-- ABA 1: DASHBOARD -->
-        <section id="dashboard" class="aba active">
+        <section id="dashboard" class="aba active no-print">
             <h2>Evolução Salarial (2006 - 2026)</h2>
             <div class="chart-container">
                 <canvas id="graficoEvolucao"></canvas>
             </div>
         </section>
 
-        <!-- ABA 2: CÁLCULO SALÁRIO -->
+        <!-- ABA 2: CÁLCULO SALÁRIO COMPLETO -->
         <section id="salario" class="aba" style="display: none;">
-            <h2>Cálculo de Salário (Base: R$ 1.935,00)</h2>
-            <div class="card alerta">
-                ⚠️ Dissídio sempre em Outubro!
+            <div class="header-impressao">SINDICATO DOS TRABALHADORES RURAIS DE GARÇA</div>
+            <h2>Salário do Trabalhador Rural</h2>
+            
+            <div class="card alerta no-print">
+                ⚠️ Dissídio sempre em Outubro! (Art. 9º Lei 7.238/84)
             </div>
             
-            <div class="card form-group">
-                <label>Ganha ACIMA do piso? Digite o salário base atual (R$):</label>
-                <input type="number" id="salarioAtual" placeholder="Ex: 2500" oninput="calcularAumento()">
+            <div class="card form-group no-print" style="background: #eef7ee;">
+                <label>Salário Mínimo Vigente (R$):</label>
+                <input type="number" id="salarioMinimo" value="1518.00" onchange="calcularSalarioCompleto()">
+                
+                <label>Salário Piso Rural (R$):</label>
+                <input type="number" id="salarioPiso" value="1935.00" onchange="calcularSalarioCompleto()">
+                
+                <label style="margin-top: 15px; font-weight: bold; color: #1F4E31;">Ganha ACIMA do piso? (Aumento de 7,5%)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="salarioAcimaPiso" placeholder="Digite o Salário Atual">
+                    <button class="btn-acao" onclick="calcularAcimaPiso()">Calcular +7,5%</button>
+                </div>
+                <h3 id="resultadoAcimaPiso" style="color: #2E5939; margin-top: 10px; display: none;">Novo Salário: R$ 0,00</h3>
+                
+                <div style="margin-top: 15px;">
+                    <label>
+                        <input type="checkbox" id="temInsalubridade" onchange="calcularSalarioCompleto()" checked> 
+                        Adicional Insalubridade (20% do Mínimo)
+                    </label>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Demonstrativo de Valores</h3>
+                <table class="tabela-valores" id="tabelaSalario">
+                    <!-- Gerado via JS -->
+                </table>
             </div>
             
-            <div class="card resultado">
-                <h3>Novo Salário (+7,5%):</h3>
-                <h2 id="novoSalario">R$ 0,00</h2>
-            </div>
+            <button class="btn-calcular no-print" onclick="window.print()">🖨️ Imprimir Cálculo</button>
         </section>
 
-        <!-- ABA 3: RESCISÃO -->
+        <!-- ABA 3: SIMULADOR DE RESCISÃO -->
         <section id="rescisao" class="aba" style="display: none;">
+            <div class="header-impressao">CÁLCULO DE RESCISÃO - TRABALHADOR RURAL</div>
             <h2>Simulador de Rescisão</h2>
             
-            <div class="form-group">
+            <div class="card form-group no-print">
+                <label>Status do Trabalhador:</label>
+                <select id="statusRegistro">
+                    <option value="com_registro">Com Carteira Assinada</option>
+                    <option value="sem_registro">Sem Registro (Cálculo Judicial)</option>
+                </select>
+
                 <label>Motivo da Saída:</label>
-                <select id="motivoSaida">
+                <select id="motivoSaidaRescisao" onchange="verificarJustaCausa()">
                     <option value="sem_justa_causa">Demissão Sem Justa Causa</option>
                     <option value="pedido">Pedido de Demissão</option>
                     <option value="justa_causa">Demissão Por Justa Causa</option>
                 </select>
-            </div>
 
-            <div class="form-group">
-                <label>Data de Admissão:</label>
-                <input type="date" id="dataAdmissao">
-            </div>
-
-            <div class="form-group">
-                <label>Data de Demissão (Saída):</label>
-                <input type="date" id="dataDemissao">
-            </div>
-
-            <div class="form-group">
-                <label>Último Salário (R$):</label>
-                <input type="number" id="salarioBaseRescisao" value="1935">
-            </div>
-
-            <button class="btn-calcular" onclick="calcularRescisao()">Calcular Rescisão</button>
-
-            <div id="resultadoRescisao" class="card resultado" style="display:none; margin-top: 15px;">
-                <ul id="listaDireitos"></ul>
-                <h3>Total Estimado:</h3>
-                <h2 id="totalRescisao">R$ 0,00</h2>
-                <div id="alertaDissidio" class="alerta" style="display: none; margin-top: 10px;">
-                    ⚠️ MULTA APLICADA: Demissão 30 dias antes do dissídio (Setembro). Multa de 1 salário (Art. 9º).
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>Data de Admissão:</label>
+                        <input type="date" id="dataAdmissao">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Data de Demissão:</label>
+                        <input type="date" id="dataDemissao">
+                    </div>
                 </div>
+
+                <label>Salário Base Rescisão (R$):</label>
+                <input type="number" id="salarioBaseRescisao" value="1935.00">
+                
+                <label>
+                    <input type="checkbox" id="insalubridadeRescisao"> 
+                    Recebia Insalubridade?
+                </label>
+
+                <label>Férias Vencidas:</label>
+                <select id="feriasVencidas">
+                    <option value="0">Nenhuma</option>
+                    <option value="1">1 Período Vencido</option>
+                    <option value="2">2 Períodos Vencidos</option>
+                </select>
+                
+                <button class="btn-calcular" onclick="calcularRescisaoCompleta()" style="margin-top: 15px;">Calcular Rescisão</button>
             </div>
+
+            <div id="resultadoRescisao" class="card resultado" style="display:none;">
+                <h3>Direitos Rescisórios:</h3>
+                <ul id="listaDireitosRescisao"></ul>
+                
+                <div id="blocoFGTS" style="background: #eef7ee; padding: 10px; border-radius: 5px; margin-top: 15px;">
+                    <h4>Fundo de Garantia (Caixa Econômica)</h4>
+                    <p>Estimativa de Saldo (8%): <strong id="valorSaldoFGTS">R$ 0,00</strong></p>
+                    <p id="linhaMultaFGTS" style="color: #D93025;">Multa 40%: <strong id="valorMultaFGTS">R$ 0,00</strong></p>
+                </div>
+
+                <div id="alertaDissidio" class="alerta" style="display: none; margin-top: 15px;">
+                    ⚠️ ATENÇÃO: Demissão ocorreu nos 30 dias que antecedem a data-base (Setembro). 
+                    Devida a MULTA DE 1 SALÁRIO (Art. 9º, Lei 7.238/84).
+                </div>
+
+                <h3 style="margin-top: 20px;">Total Líquido a Receber:</h3>
+                <h2 id="totalRescisao">R$ 0,00</h2>
+            </div>
+            
+            <button class="btn-calcular no-print" id="btnImprimirRescisao" style="display:none;" onclick="window.print()">🖨️ Imprimir Rescisão</button>
         </section>
     </main>
 
     <script src="app.js"></script>
-    <script>
-        // Registro do Service Worker para o PWA (Instalação e Offline)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
-    </script>
 </body>
 </html>
